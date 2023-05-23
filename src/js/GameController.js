@@ -5,19 +5,42 @@ export default class GameController {
   }
 
   init() {
-    // TODO: add event listeners to gamePlay events
-    // TODO: load saved stated from stateService
+    this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
+    this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
+    this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
+
+    const savedState = this.stateService.load();
+
+    if (savedState) {
+      this.gameState = savedState;
+
+      this.gamePlay.drawUi(savedState.theme);
+      this.gamePlay.redrawPositions(savedState.positions);
+    } else {
+      this.startNewGame();
+    }
+  }
+
+  startNewGame() {
+    this.gameState = {
+      level: 1,
+      theme: "prairie",
+      positions: [],
+    };
+
+    this.gamePlay.drawUi(this.gameState.theme);
+    this.gamePlay.redrawPositions(this.gameState.positions);
   }
 
   onCellClick(index) {
-    // TODO: react to click
+    const selectedCell = index;
   }
 
   onCellEnter(index) {
-    // TODO: react to mouse enter
+    const hoveredCell = index;
   }
 
   onCellLeave(index) {
-    // TODO: react to mouse leave
+    const previousCell = index;
   }
 }
