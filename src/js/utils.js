@@ -23,18 +23,46 @@
  * ```
  * */
 export function calcTileType(index, boardSize) {
-  // TODO: ваш код будет тут
-  return 'center';
+  const isTop = index < boardSize;
+  const isBottom = index >= boardSize ** 2 - boardSize;
+  const isLeft = index % boardSize === 0;
+  const isRight = (index + 1) % boardSize === 0;
+
+  if (isTop && isLeft) {
+    return "top-left";
+  }
+  if (isTop && isRight) {
+    return "top-right";
+  }
+  if (isTop) {
+    return "top";
+  }
+  if (isBottom && isLeft) {
+    return "bottom-left";
+  }
+  if (isBottom && isRight) {
+    return "bottom-right";
+  }
+  if (isBottom) {
+    return "bottom";
+  }
+  if (isRight) {
+    return "right";
+  }
+  if (isLeft) {
+    return "left";
+  }
+  return "center";
 }
 
 export function calcHealthLevel(health) {
   if (health < 15) {
-    return 'critical';
+    return "critical";
   }
 
   if (health < 50) {
-    return 'normal';
+    return "normal";
   }
 
-  return 'high';
+  return "high";
 }

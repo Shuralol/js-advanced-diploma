@@ -11,6 +11,18 @@
  * team.characters // [swordsman, bowman]
  * ```
  * */
+
 export default class Team {
-  // TODO: write your logic here
+  constructor(characters = []) {
+    this.characters = characters;
+  }
+
+  add(character) {
+    this.characters.push(character);
+  }
+
+  addAll(characters) {
+    this.characters.push(...characters);
+  }
 }
+
