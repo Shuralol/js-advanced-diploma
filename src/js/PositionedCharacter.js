@@ -16,7 +16,7 @@ export default class PositionedCharacter {
     this.position = position;
   }
 }
-
+/* 
 import { generateTeam } from "../utils.js";
 import { PositionedCharacter } from "../PositionedCharacter.js";
 import GamePlay from "../GamePlay.js";
@@ -59,3 +59,4 @@ const allPositionedCharacters = [
   ...enemyPositionedCharacters,
 ];
 GamePlay.redrawPositions(allPositionedCharacters);
+ */
