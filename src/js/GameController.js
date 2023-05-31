@@ -1,21 +1,25 @@
-import GameController from './GameController';
 import Team from './Team';
 import PositionedCharacter from './PositionedCharacter';
 import { Swordsman, Bowman, Magician } from './characters';
 
-export default class ExtendedGameController extends GameController {
+export default class GameController {
   constructor(gamePlay, stateService) {
-    super(gamePlay, stateService);
+    this.gamePlay = gamePlay;
+    this.stateService = stateService;
     this.columnIndices = {
       player: [0, 1],
       enemy: [this.gamePlay.boardSize - 2, this.gamePlay.boardSize - 1],
     };
+    this.gameState = new GameState();
+    this.selectedCharacter = null;
   }
 
   init() {
-    super.init();
+    this.gameState.init();
+    this.gamePlay.drawUi(this.gameState.theme);
     this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
     this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
+    this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
   }
 
   onCellEnter(index) {
@@ -35,19 +39,46 @@ export default class ExtendedGameController extends GameController {
     return `🎖${level} ⚔${attack} 🛡${defense} ❤${health}`;
   }
 
+  onCellClick(index) {
+    const clickedCharacter = this.getCharacterByIndex(index);
+
+    if (clickedCharacter) {
+      if (this.isPlayerCharacter(clickedCharacter)) {
+        this.selectPlayerCharacter(clickedCharacter, index);
+      } else {
+        this.showError('You can only select player characters!');
+      }
+    } else {
+      this.showError('No character found in the clicked cell!');
+    }
+  }
+
+  selectPlayerCharacter(character, index) {
+    if (this.selectedCharacter) {
+      this.gamePlay.deselectCell(this.selectedCharacter.position);
+    }
+
+    this.selectedCharacter = character;
+    this.gamePlay.selectCell(index);
+  }
+
   getCharacterByIndex(index) {
     return this.gameState.positions.find((positionedCharacter) => positionedCharacter.position === index);
   }
 
-  startNewGame() {
-    this.gameState = {
-      level: 1,
-      theme: 'prairie',
-      positions: [],
-    };
+  isPlayerCharacter(character) {
+    return character.character instanceof Bowman ||
+      character.character instanceof Swordsman ||
+      character.character instanceof Magician;
+  }
 
+  showError(message) {
+    this.gamePlay.showMessage(message);
+  }
+
+  startNewGame() {
+    this.gameState.reset();
     this.generateTeams();
-    this.gamePlay.drawUi(this.gameState.theme);
     this.gamePlay.redrawPositions(this.gameState.positions);
   }
 
@@ -86,9 +117,29 @@ export default class ExtendedGameController extends GameController {
     const rowIndex = Math.floor(Math.random() * this.gamePlay.boardSize);
     const columnIndex = columnIndices[Math.floor(Math.random() * columnIndices.length)];
     return rowIndex * this.gamePlay.boardSize + columnIndex;
- 
   }
 }
+
+class GameState {
+  constructor() {
+    this.level = 1;
+    this.theme = 'prairie';
+    this.positions = [];
+  }
+
+  init() {
+    this.level = 1;
+    this.theme = 'prairie';
+    this.positions = [];
+  }
+
+  reset() {
+    this.level = 1;
+    this.theme = 'prairie';
+    this.positions = [];
+  }
+}
+
 
 /* export default class GameController {
   constructor(gamePlay, stateService) {
