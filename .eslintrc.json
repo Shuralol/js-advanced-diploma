@@ -8,7 +8,8 @@
       "ecmaVersion": 2021
     },
     "rules": {
-      "import/extensions": "off"
+      "import/extensions": "off",
+      "no-restricted-syntax": "off"
     }
   }
   

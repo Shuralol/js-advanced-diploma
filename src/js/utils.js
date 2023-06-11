@@ -29,40 +29,40 @@ export function calcTileType(index, boardSize) {
   const isRight = (index + 1) % boardSize === 0;
 
   if (isTop && isLeft) {
-    return "top-left";
+    return 'top-left';
   }
   if (isTop && isRight) {
-    return "top-right";
+    return 'top-right';
   }
   if (isTop) {
-    return "top";
+    return 'top';
   }
   if (isBottom && isLeft) {
-    return "bottom-left";
+    return 'bottom-left';
   }
   if (isBottom && isRight) {
-    return "bottom-right";
+    return 'bottom-right';
   }
   if (isBottom) {
-    return "bottom";
+    return 'bottom';
   }
   if (isRight) {
-    return "right";
+    return 'right';
   }
   if (isLeft) {
-    return "left";
+    return 'left';
   }
-  return "center";
+  return 'center';
 }
 
 export function calcHealthLevel(health) {
   if (health < 15) {
-    return "critical";
+    return 'critical';
   }
 
   if (health < 50) {
-    return "normal";
+    return 'normal';
   }
 
-  return "high";
+  return 'high';
 }

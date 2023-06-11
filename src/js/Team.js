@@ -25,4 +25,3 @@ export default class Team {
     this.characters.push(...characters);
   }
 }
-

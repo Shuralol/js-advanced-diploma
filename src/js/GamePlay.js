@@ -1,4 +1,5 @@
 import { calcHealthLevel, calcTileType } from './utils';
+import cursors from './cursors';
 
 export default class GamePlay {
   constructor() {
@@ -44,9 +45,9 @@ export default class GamePlay {
     this.saveGameEl = this.container.querySelector('[data-id=action-save]');
     this.loadGameEl = this.container.querySelector('[data-id=action-load]');
 
-    this.newGameEl.addEventListener('click', event => this.onNewGameClick(event));
-    this.saveGameEl.addEventListener('click', event => this.onSaveGameClick(event));
-    this.loadGameEl.addEventListener('click', event => this.onLoadGameClick(event));
+    this.newGameEl.addEventListener('click', (event) => this.onNewGameClick(event));
+    this.saveGameEl.addEventListener('click', (event) => this.onSaveGameClick(event));
+    this.loadGameEl.addEventListener('click', (event) => this.onLoadGameClick(event));
 
     this.boardEl = this.container.querySelector('[data-id=board]');
 
@@ -54,9 +55,9 @@ export default class GamePlay {
     for (let i = 0; i < this.boardSize ** 2; i += 1) {
       const cellEl = document.createElement('div');
       cellEl.classList.add('cell', 'map-tile', `map-tile-${calcTileType(i, this.boardSize)}`);
-      cellEl.addEventListener('mouseenter', event => this.onCellEnter(event));
-      cellEl.addEventListener('mouseleave', event => this.onCellLeave(event));
-      cellEl.addEventListener('click', event => this.onCellClick(event));
+      cellEl.addEventListener('mouseenter', (event) => this.onCellEnter(event));
+      cellEl.addEventListener('mouseleave', (event) => this.onCellLeave(event));
+      cellEl.addEventListener('click', (event) => this.onCellClick(event));
       this.boardEl.appendChild(cellEl);
     }
 
@@ -89,6 +90,47 @@ export default class GamePlay {
       charEl.appendChild(healthEl);
       cellEl.appendChild(charEl);
     }
+  }
+
+  getAllowedMoves(position) {
+    const character = this.getCharacterByPosition(position);
+    const { type } = character.character;
+
+    if (type === 'swordsman' || type === 'skeleton') {
+      return this.getMovesInRadius(position, 1);
+    } if (type === 'bowman' || type === 'vampire') {
+      return this.getMovesInRadius(position, 2);
+    } if (type === 'magician' || type === 'demon') {
+      return this.getMovesInRadius(position, 4);
+    }
+
+    return [];
+  }
+
+  getMovesInRadius(position, radius) {
+    const allowedMoves = [];
+    const rowIndex = Math.floor(position / this.gamePlay.boardSize);
+    const columnIndex = position % this.gamePlay.boardSize;
+
+    // eslint-disable-next-line no-plusplus
+    for (let row = rowIndex - radius; row <= rowIndex + radius; row++) {
+      // eslint-disable-next-line no-plusplus
+      for (let col = columnIndex - radius; col <= columnIndex + radius; col++) {
+        if (this.isValidPosition(row, col) && !(row === rowIndex && col === columnIndex)) {
+          allowedMoves.push(row * this.gamePlay.boardSize + col);
+        }
+      }
+    }
+
+    return allowedMoves;
+  }
+
+  isValidPosition(row, col) {
+    return row >= 0 && row < this.gamePlay.boardSize && col >= 0 && col < this.gamePlay.boardSize;
+  }
+
+  getCharacterByPosition(position) {
+    return this.gameState.board[position];
   }
 
   /**
@@ -145,43 +187,97 @@ export default class GamePlay {
     this.loadGameListeners.push(callback);
   }
 
-  onCellEnter(event) {
-    event.preventDefault();
-    const index = this.cells.indexOf(event.currentTarget);
-    this.cellEnterListeners.forEach(o => o.call(null, index));
+  onCellEnter(index) {
+    const character = this.gameState.board[index];
+
+    if (character && character.player) {
+      if (character !== this.selectedCharacter) {
+        return;
+      }
+
+      this.gamePlay.setCursor('pointer');
+    } else if (this.selectedCharacter) {
+      const { position } = this.selectedCharacter;
+      const allowedMoves = this.getAllowedMoves(position);
+
+      if (allowedMoves.includes(index)) {
+        this.gamePlay.selectCell(index, 'green');
+        this.gamePlay.setCursor('pointer');
+      } else {
+        this.gamePlay.setCursor('notallowed');
+      }
+    }
   }
 
-  onCellLeave(event) {
-    event.preventDefault();
-    const index = this.cells.indexOf(event.currentTarget);
-    this.cellLeaveListeners.forEach(o => o.call(null, index));
+  onCellLeave(index) {
+    const character = this.gameState.board[index];
+
+    if (character && character.player) {
+      if (character !== this.selectedCharacter) {
+        return;
+      }
+
+      this.gamePlay.setCursor('pointer');
+    } else if (this.selectedCharacter) {
+      const { position } = this.selectedCharacter;
+      const allowedMoves = this.getAllowedMoves(position);
+
+      if (allowedMoves.includes(index)) {
+        this.gamePlay.deselectCell(index);
+      }
+
+      this.gamePlay.setCursor('auto');
+    }
   }
 
-  onCellClick(event) {
-    const index = this.cells.indexOf(event.currentTarget);
-    this.cellClickListeners.forEach(o => o.call(null, index));
+  onCellClick(index) {
+    const character = this.gameState.board[index];
+
+    if (character && character.player && character !== this.selectedCharacter) {
+      if (this.selectedCharacter) {
+        const previousIndex = this.gameState.board.findIndex(
+          (cell) => cell === this.selectedCharacter,
+        );
+        this.gamePlay.deselectCell(previousIndex);
+      }
+
+      this.selectedCharacter = character;
+      this.gamePlay.selectCell(index);
+      this.gamePlay.setCursor('pointer');
+    } else if (this.selectedCharacter) {
+      const { position } = this.selectedCharacter;
+      const allowedMoves = this.getAllowedMoves(position);
+
+      if (allowedMoves.includes(index)) {
+        this.moveSelectedCharacter(index);
+      } else {
+        this.gamePlay.showMessage('Invalid move!');
+      }
+    }
   }
 
   onNewGameClick(event) {
     event.preventDefault();
-    this.newGameListeners.forEach(o => o.call(null));
+    this.newGameListeners.forEach((o) => o.call(null));
   }
 
   onSaveGameClick(event) {
     event.preventDefault();
-    this.saveGameListeners.forEach(o => o.call(null));
+    this.saveGameListeners.forEach((o) => o.call(null));
   }
 
   onLoadGameClick(event) {
     event.preventDefault();
-    this.loadGameListeners.forEach(o => o.call(null));
+    this.loadGameListeners.forEach((o) => o.call(null));
   }
 
   static showError(message) {
+    // eslint-disable-next-line no-alert
     alert(message);
   }
 
   static showMessage(message) {
+    // eslint-disable-next-line no-alert
     alert(message);
   }
 
@@ -193,7 +289,7 @@ export default class GamePlay {
   deselectCell(index) {
     const cell = this.cells[index];
     cell.classList.remove(...Array.from(cell.classList)
-      .filter(o => o.startsWith('selected')));
+      .filter((o) => o.startsWith('selected')));
   }
 
   showCellTooltip(message, index) {
@@ -203,7 +299,7 @@ export default class GamePlay {
   hideCellTooltip(index) {
     this.cells[index].title = '';
   }
-  
+
   showDamage(index, damage) {
     return new Promise((resolve) => {
       const cell = this.cells[index];
@@ -219,8 +315,10 @@ export default class GamePlay {
     });
   }
 
-  setCursor(cursor) {
-    this.boardEl.style.cursor = cursor;
+  // eslint-disable-next-line class-methods-use-this
+  setCursor(cursorType) {
+    const body = document.querySelector('body');
+    body.style.cursor = cursors[cursorType];
   }
 
   checkBinding() {

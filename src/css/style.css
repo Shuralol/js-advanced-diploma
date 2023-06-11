@@ -239,6 +239,14 @@ body {
   font-weight: bold;
   animation: 500ms fade ease-out;
 }
+.game-board__cell--green {
+  background-color: rgba(0, 255, 0, 0.5);
+}
+
+.game-board__cell--red {
+  background-color: rgba(255, 0, 0, 0.5);
+}
+
 
 @keyframes fade {
   from {

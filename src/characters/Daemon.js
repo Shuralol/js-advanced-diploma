@@ -1,4 +1,4 @@
-import Character from '../Character';
+import Character from '../js/Character';
 
 export default class Daemon extends Character {
   constructor(level) {

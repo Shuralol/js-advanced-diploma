@@ -1,9 +1,14 @@
+/* eslint-disable no-use-before-define */
+/* eslint-disable class-methods-use-this */
+// eslint-disable-next-line max-classes-per-file
 import Team from './Team';
 import PositionedCharacter from './PositionedCharacter';
-import { Swordsman, Bowman, Magician } from './characters';
+// eslint-disable-next-line import/no-unresolved
+import { Swordsman, Bowman, Magician } from './Characters';
 
 export default class GameController {
   constructor(gamePlay, stateService) {
+    this.selectedCharacter = null;
     this.gamePlay = gamePlay;
     this.stateService = stateService;
     this.columnIndices = {
@@ -22,17 +27,40 @@ export default class GameController {
     this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
   }
 
-  onCellEnter(index) {
+  /*  onCellEnter(index) {
     const positionedCharacter = this.getCharacterByIndex(index);
     if (positionedCharacter) {
       const { level, attack, defense, health } = positionedCharacter.character;
       const tooltipText = this.createTooltipText(level, attack, defense, health);
       this.gamePlay.showCellTooltip(tooltipText, index);
     }
+  } */
+
+  onCellEnter(index) {
+    const character = this.gameState.board[index];
+
+    if (character && character.player) {
+      if (character !== this.selectedCharacter) {
+        return;
+      }
+
+      this.gamePlay.setCursor('pointer');
+    }
   }
 
-  onCellLeave(index) {
+  /*   onCellLeave(index) {
     this.gamePlay.hideCellTooltip(index);
+  } */
+  onCellLeave(index) {
+    const character = this.gameState.board[index];
+
+    if (character && character.player) {
+      if (character !== this.selectedCharacter) {
+        return;
+      }
+
+      this.gamePlay.setCursor('auto');
+    }
   }
 
   createTooltipText(level, attack, defense, health) {
@@ -40,36 +68,46 @@ export default class GameController {
   }
 
   onCellClick(index) {
-    const clickedCharacter = this.getCharacterByIndex(index);
+    const character = this.gameState.board[index];
 
-    if (clickedCharacter) {
-      if (this.isPlayerCharacter(clickedCharacter)) {
-        this.selectPlayerCharacter(clickedCharacter, index);
-      } else {
-        this.showError('You can only select player characters!');
+    if (character && character.player && character !== this.selectedCharacter) {
+      if (this.selectedCharacter) {
+        const previousIndex = this.gameState.board.findIndex(
+          (cell) => cell === this.selectedCharacter,
+        );
+        this.gamePlay.deselectCell(previousIndex);
       }
-    } else {
-      this.showError('No character found in the clicked cell!');
+
+      this.selectedCharacter = character;
+      this.gamePlay.selectCell(index);
+
+      this.gamePlay.setCursor('pointer');
     }
   }
 
   selectPlayerCharacter(character, index) {
     if (this.selectedCharacter) {
       this.gamePlay.deselectCell(this.selectedCharacter.position);
+      this.selectedCharacter = null;
     }
 
     this.selectedCharacter = character;
     this.gamePlay.selectCell(index);
+    this.gamePlay.setCursor('pointer');
   }
 
   getCharacterByIndex(index) {
-    return this.gameState.positions.find((positionedCharacter) => positionedCharacter.position === index);
+    return this.gameState.positions.find(
+      (positionedCharacter) => positionedCharacter.position === index,
+    );
   }
 
   isPlayerCharacter(character) {
-    return character.character instanceof Bowman ||
-      character.character instanceof Swordsman ||
-      character.character instanceof Magician;
+    return (
+      character.character instanceof Bowman
+      || character.character instanceof Swordsman
+      || character.character instanceof Magician
+    );
   }
 
   showError(message) {
@@ -80,6 +118,11 @@ export default class GameController {
     this.gameState.reset();
     this.generateTeams();
     this.gamePlay.redrawPositions(this.gameState.positions);
+
+    if (this.selectedCharacter) {
+      this.gamePlay.deselectCell(this.selectedCharacter.position);
+      this.selectedCharacter = null;
+    }
   }
 
   generateTeams() {
@@ -88,12 +131,26 @@ export default class GameController {
     const playerCharacterCount = 3;
     const enemyCharacterCount = 3;
 
-    this.playerTeam = this.generateTeam(playerTypes, maxLevel, playerCharacterCount, 'player');
-    this.enemyTeam = this.generateTeam(playerTypes, maxLevel, enemyCharacterCount, 'enemy');
+    this.playerTeam = this.generateTeam(
+      playerTypes,
+      maxLevel,
+      playerCharacterCount,
+      'player',
+    );
+    this.enemyTeam = this.generateTeam(
+      playerTypes,
+      maxLevel,
+      enemyCharacterCount,
+      'enemy',
+    );
 
     this.gameState.positions = [
-      ...this.playerTeam.characters.map((character) => new PositionedCharacter(character, this.getRandomPosition('player'))),
-      ...this.enemyTeam.characters.map((character) => new PositionedCharacter(character, this.getRandomPosition('enemy')))
+      ...this.playerTeam.characters.map(
+        (character) => new PositionedCharacter(character, this.getRandomPosition('player')),
+      ),
+      ...this.enemyTeam.characters.map(
+        (character) => new PositionedCharacter(character, this.getRandomPosition('enemy')),
+      ),
     ];
   }
 
@@ -101,10 +158,11 @@ export default class GameController {
     const teamCharacters = [];
     const columnIndices = this.columnIndices[team];
 
+    // eslint-disable-next-line no-plusplus
     for (let i = 0; i < characterCount; i++) {
-      const randomType = allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
+      const RandomType = allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
       const randomLevel = Math.floor(Math.random() * maxLevel) + 1;
-      const character = new randomType(randomLevel);
+      const character = new RandomType(randomLevel);
       const position = this.getRandomPosition(columnIndices);
       const positionedCharacter = new PositionedCharacter(character, position);
       teamCharacters.push(positionedCharacter);
@@ -139,7 +197,6 @@ class GameState {
     this.positions = [];
   }
 }
-
 
 /* export default class GameController {
   constructor(gamePlay, stateService) {
@@ -188,4 +245,3 @@ class GameState {
   }
 }
  */
-

@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+/* eslint-disable import/no-unresolved */
 import GameController from '../GameController.js';
 import GamePlay from '../GamePlay.js';
 import StateService from '../StateService.js';

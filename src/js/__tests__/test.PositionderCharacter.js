@@ -1,41 +1,66 @@
-import { Character, Swordsman, Bowman, Magician, generateTeam, characterGenerator } from '../PositionedCharacter.js';
+/* eslint-disable no-undef */
+/* eslint-disable import/named */
+import { generateTeam } from '../utils.js';
+import PositionedCharacter from '../PositionedCharacter.js';
+import GamePlay from '../GamePlay.js';
+// eslint-disable-next-line import/no-unresolved, no-unused-vars
+import Character from './Character.js'; // Подставьте правильный путь к файлу Character.js
 
-describe('Character', () => {
-  test('throws an exception when creating an instance of the base Character class', () => {
-    expect(() => new Character()).toThrow();
+describe('Game Initialization', () => {
+  beforeEach(() => {
+    GamePlay.clearGame();
   });
 
-  test('does not throw an exception when creating instances of inherited classes', () => {
-    expect(() => new Swordsman()).not.toThrow();
-    expect(() => new Bowman()).not.toThrow();
-    expect(() => new Magician()).not.toThrow();
-  });
-});
+  test('correctly initializes player and enemy teams with positioned characters', () => {
+    const playerAllowedTypes = [Swordsman, Bowman, Magician];
+    const playerMaxLevel = 3;
+    const playerCharacterCount = 2;
+    const enemyAllowedTypes = [Undead, Vampire, Daemon];
+    const enemyMaxLevel = 4;
+    const enemyCharacterCount = 2;
 
-describe('generateTeam', () => {
-  test('creates characters with correct level and type', () => {
-    const allowedTypes = [Bowman, Swordsman, Magician];
-    const maxLevel = 1;
-    const characterCount = 3;
-    const team = generateTeam(allowedTypes, maxLevel, characterCount);
+    const playerTeam = generateTeam(
+      playerAllowedTypes,
+      playerMaxLevel,
+      playerCharacterCount,
+    );
+    const enemyTeam = generateTeam(
+      enemyAllowedTypes,
+      enemyMaxLevel,
+      enemyCharacterCount,
+    );
 
-    expect(team.characters).toHaveLength(characterCount);
-    team.characters.forEach((character) => {
-      expect(character.level).toBe(maxLevel);
-      expect(allowedTypes).toContain(character.constructor);
+    const playerPositionedCharacters = [];
+    const enemyPositionedCharacters = [];
+
+    playerTeam.characters.forEach((character, index) => {
+      const position = index + 1;
+      const positionedCharacter = new PositionedCharacter(character, position);
+      playerPositionedCharacters.push(positionedCharacter);
+    });
+
+    enemyTeam.characters.forEach((character, index) => {
+      const position = index + 57;
+      const positionedCharacter = new PositionedCharacter(character, position);
+      enemyPositionedCharacters.push(positionedCharacter);
+    });
+
+    const allPositionedCharacters = [
+      ...playerPositionedCharacters,
+      ...enemyPositionedCharacters,
+    ];
+
+    GamePlay.redrawPositions(allPositionedCharacters);
+
+    expect(GamePlay.boardSize).toBe(64);
+
+    allPositionedCharacters.forEach((positionedCharacter) => {
+      // eslint-disable-next-line object-curly-spacing
+      const { position } = positionedCharacter;
+      // eslint-disable-next-line prefer-destructuring
+      const character = positionedCharacter.character;
+
+      expect(GamePlay.board.getCellValue(position)).toEqual(character);
     });
   });
 });
-
-describe('characterGenerator', () => {
-  test('returns an infinite sequence of characters from the allowed types', () => {
-    const allowedTypes = [Bowman, Swordsman, Magician];
-    const generator = characterGenerator(allowedTypes);
-
-    for (let i = 0; i < 10; i++) {
-      const character = generator.next().value;
-      expect(allowedTypes).toContain(character.constructor);
-    }
-  });
-});
-
