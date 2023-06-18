@@ -16,6 +16,7 @@ export default class GameController {
       enemy: [this.gamePlay.boardSize - 2, this.gamePlay.boardSize - 1],
     };
     this.gameState = new GameState();
+    this.currentPlayerIndex = 0;
     this.selectedCharacter = null;
   }
 
@@ -27,15 +28,6 @@ export default class GameController {
     this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
   }
 
-  /*  onCellEnter(index) {
-    const positionedCharacter = this.getCharacterByIndex(index);
-    if (positionedCharacter) {
-      const { level, attack, defense, health } = positionedCharacter.character;
-      const tooltipText = this.createTooltipText(level, attack, defense, health);
-      this.gamePlay.showCellTooltip(tooltipText, index);
-    }
-  } */
-
   onCellEnter(index) {
     const character = this.gameState.board[index];
 
@@ -45,12 +37,19 @@ export default class GameController {
       }
 
       this.gamePlay.setCursor('pointer');
+    } else if (this.selectedCharacter) {
+      const { position } = this.selectedCharacter;
+      const allowedMoves = this.getAllowedMoves(position);
+
+      if (allowedMoves.includes(index)) {
+        this.gamePlay.selectCell(index, 'green');
+        this.gamePlay.setCursor('pointer');
+      } else {
+        this.gamePlay.setCursor('notallowed');
+      }
     }
   }
 
-  /*   onCellLeave(index) {
-    this.gamePlay.hideCellTooltip(index);
-  } */
   onCellLeave(index) {
     const character = this.gameState.board[index];
 
@@ -59,12 +58,17 @@ export default class GameController {
         return;
       }
 
+      this.gamePlay.setCursor('pointer');
+    } else if (this.selectedCharacter) {
+      const { position } = this.selectedCharacter;
+      const allowedMoves = this.getAllowedMoves(position);
+
+      if (allowedMoves.includes(index)) {
+        this.gamePlay.deselectCell(index);
+      }
+
       this.gamePlay.setCursor('auto');
     }
-  }
-
-  createTooltipText(level, attack, defense, health) {
-    return `🎖${level} ⚔${attack} 🛡${defense} ❤${health}`;
   }
 
   onCellClick(index) {
@@ -80,101 +84,88 @@ export default class GameController {
 
       this.selectedCharacter = character;
       this.gamePlay.selectCell(index);
-
       this.gamePlay.setCursor('pointer');
+    } else if (this.selectedCharacter) {
+      const { position } = this.selectedCharacter;
+      const allowedMoves = this.getAllowedMoves(position);
+
+      if (allowedMoves.includes(index)) {
+        const target = this.gameState.board[index];
+        this.attackSelectedCharacter(target);
+      } else {
+        this.gamePlay.showMessage('Invalid move!');
+      }
     }
   }
 
-  selectPlayerCharacter(character, index) {
-    if (this.selectedCharacter) {
-      this.gamePlay.deselectCell(this.selectedCharacter.position);
-      this.selectedCharacter = null;
+  async attackSelectedCharacter(target) {
+    const attacker = this.selectedCharacter;
+    const damage = Math.max(
+      attacker.attack - target.defence,
+      attacker.attack * 0.1,
+    );
+
+    // eslint-disable-next-line no-undef
+    await this.gamePlay.showDamage(index, damage);
+
+    // eslint-disable-next-line no-param-reassign
+    target.health -= damage;
+
+    if (target.health <= 0) {
+      // Remove the defeated character from the board
+      const targetIndex = this.gameState.board.findIndex(
+        (cell) => cell === target,
+      );
+      this.gameState.board[targetIndex] = null;
+      this.gamePlay.redrawPositions(this.gameState.board);
+    } else {
+      this.gamePlay.redrawPositions(this.gameState.board);
     }
 
-    this.selectedCharacter = character;
-    this.gamePlay.selectCell(index);
-    this.gamePlay.setCursor('pointer');
+    this.switchTurn();
   }
 
-  getCharacterByIndex(index) {
-    return this.gameState.positions.find(
-      (positionedCharacter) => positionedCharacter.position === index,
-    );
-  }
+  getAllowedMoves(position) {
+    const allowedMoves = [];
+    const { row, column } = position;
 
-  isPlayerCharacter(character) {
-    return (
-      character.character instanceof Bowman
-      || character.character instanceof Swordsman
-      || character.character instanceof Magician
-    );
-  }
+    for (let i = 1; i <= this.selectedCharacter.moveRange; i += 1) {
+      const leftIndex = this.gamePlay.boardSize * row + column - i;
+      const rightIndex = this.gamePlay.boardSize * row + column + i;
+      const topIndex = this.gamePlay.boardSize * (row - i) + column;
+      const bottomIndex = this.gamePlay.boardSize * (row + i) + column;
 
-  showError(message) {
-    this.gamePlay.showMessage(message);
-  }
+      if (leftIndex >= 0 && leftIndex % this.gamePlay.boardSize <= column - i) {
+        allowedMoves.push(leftIndex);
+      }
 
-  startNewGame() {
-    this.gameState.reset();
-    this.generateTeams();
-    this.gamePlay.redrawPositions(this.gameState.positions);
+      if (
+        rightIndex < this.gamePlay.boardSize ** 2
+        && rightIndex % this.gamePlay.boardSize >= column + i
+      ) {
+        allowedMoves.push(rightIndex);
+      }
 
-    if (this.selectedCharacter) {
-      this.gamePlay.deselectCell(this.selectedCharacter.position);
-      this.selectedCharacter = null;
-    }
-  }
+      if (
+        topIndex >= 0
+        && Math.floor(topIndex / this.gamePlay.boardSize) <= row - i
+      ) {
+        allowedMoves.push(topIndex);
+      }
 
-  generateTeams() {
-    const playerTypes = [Bowman, Swordsman, Magician];
-    const maxLevel = 3;
-    const playerCharacterCount = 3;
-    const enemyCharacterCount = 3;
-
-    this.playerTeam = this.generateTeam(
-      playerTypes,
-      maxLevel,
-      playerCharacterCount,
-      'player',
-    );
-    this.enemyTeam = this.generateTeam(
-      playerTypes,
-      maxLevel,
-      enemyCharacterCount,
-      'enemy',
-    );
-
-    this.gameState.positions = [
-      ...this.playerTeam.characters.map(
-        (character) => new PositionedCharacter(character, this.getRandomPosition('player')),
-      ),
-      ...this.enemyTeam.characters.map(
-        (character) => new PositionedCharacter(character, this.getRandomPosition('enemy')),
-      ),
-    ];
-  }
-
-  generateTeam(allowedTypes, maxLevel, characterCount, team) {
-    const teamCharacters = [];
-    const columnIndices = this.columnIndices[team];
-
-    // eslint-disable-next-line no-plusplus
-    for (let i = 0; i < characterCount; i++) {
-      const RandomType = allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
-      const randomLevel = Math.floor(Math.random() * maxLevel) + 1;
-      const character = new RandomType(randomLevel);
-      const position = this.getRandomPosition(columnIndices);
-      const positionedCharacter = new PositionedCharacter(character, position);
-      teamCharacters.push(positionedCharacter);
+      if (
+        bottomIndex < this.gamePlay.boardSize ** 2
+        && Math.floor(bottomIndex / this.gamePlay.boardSize) >= row + i
+      ) {
+        allowedMoves.push(bottomIndex);
+      }
     }
 
-    return new Team(teamCharacters);
+    return allowedMoves;
   }
 
-  getRandomPosition(columnIndices) {
-    const rowIndex = Math.floor(Math.random() * this.gamePlay.boardSize);
-    const columnIndex = columnIndices[Math.floor(Math.random() * columnIndices.length)];
-    return rowIndex * this.gamePlay.boardSize + columnIndex;
+  switchTurn() {
+    this.currentPlayerIndex = (this.currentPlayerIndex + 1) % 2;
   }
 }
 
@@ -182,66 +173,49 @@ class GameState {
   constructor() {
     this.level = 1;
     this.theme = 'prairie';
-    this.positions = [];
+    this.board = [];
   }
 
   init() {
     this.level = 1;
     this.theme = 'prairie';
-    this.positions = [];
+    this.board = Array(64).fill(null);
+
+    const playerTeam = new Team();
+    playerTeam.add(
+      new PositionedCharacter(new Swordsman(), this.columnIndices.player[0]),
+    );
+    playerTeam.add(
+      new PositionedCharacter(new Bowman(), this.columnIndices.player[0]),
+    );
+    playerTeam.add(
+      new PositionedCharacter(new Magician(), this.columnIndices.player[0]),
+    );
+
+    const enemyTeam = new Team();
+    enemyTeam.add(
+      new PositionedCharacter(new Swordsman(), this.columnIndices.enemy[0]),
+    );
+    enemyTeam.add(
+      new PositionedCharacter(new Bowman(), this.columnIndices.enemy[0]),
+    );
+    enemyTeam.add(
+      new PositionedCharacter(new Magician(), this.columnIndices.enemy[0]),
+    );
+
+    this.board = [...playerTeam.characters, ...enemyTeam.characters].map(
+      (character, index) => {
+        const row = Math.floor(index / this.gamePlay.boardSize);
+        const column = index % this.gamePlay.boardSize;
+        const position = { row, column };
+        return new PositionedCharacter(character, position);
+      },
+    );
   }
 
   reset() {
     this.level = 1;
     this.theme = 'prairie';
-    this.positions = [];
+    this.board = Array(64).fill(null);
   }
 }
-
-/* export default class GameController {
-  constructor(gamePlay, stateService) {
-    this.gamePlay = gamePlay;
-    this.stateService = stateService;
-  }
-
-  init() {
-    this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
-    this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
-    this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
-
-    const savedState = this.stateService.load();
-
-    if (savedState) {
-      this.gameState = savedState;
-
-      this.gamePlay.drawUi(savedState.theme);
-      this.gamePlay.redrawPositions(savedState.positions);
-    } else {
-      this.startNewGame();
-    }
-  }
-
-  startNewGame() {
-    this.gameState = {
-      level: 1,
-      theme: "prairie",
-      positions: [],
-    };
-
-    this.gamePlay.drawUi(this.gameState.theme);
-    this.gamePlay.redrawPositions(this.gameState.positions);
-  }
-
-  onCellClick(index) {
-    const selectedCell = index;
-  }
-
-  onCellEnter(index) {
-    const hoveredCell = index;
-  }
-
-  onCellLeave(index) {
-    const previousCell = index;
-  }
-}
- */

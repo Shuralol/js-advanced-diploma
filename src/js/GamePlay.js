@@ -92,21 +92,6 @@ export default class GamePlay {
     }
   }
 
-  getAllowedMoves(position) {
-    const character = this.getCharacterByPosition(position);
-    const { type } = character.character;
-
-    if (type === 'swordsman' || type === 'skeleton') {
-      return this.getMovesInRadius(position, 1);
-    } if (type === 'bowman' || type === 'vampire') {
-      return this.getMovesInRadius(position, 2);
-    } if (type === 'magician' || type === 'demon') {
-      return this.getMovesInRadius(position, 4);
-    }
-
-    return [];
-  }
-
   getMovesInRadius(position, radius) {
     const allowedMoves = [];
     const rowIndex = Math.floor(position / this.gamePlay.boardSize);
