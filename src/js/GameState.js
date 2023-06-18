@@ -37,23 +37,20 @@ export default class GameState {
     this.positions.forEach((position) => {
       const { character } = position;
 
-      // Увеличение уровня персонажа
       character.levelUp();
 
-      // Повышение показателя здоровья
       const health = character.health + this.level + 80;
       character.health = Math.min(health, 100);
 
-      // Повышение показателей атаки и защиты
       const attackAfter = Math.max(
         character.attack,
         // eslint-disable-next-line no-mixed-operators
-        character.attack * (80 + character.health) / 100,
+        (character.attack * (80 + character.health)) / 100,
       );
       const defenseAfter = Math.max(
         character.defense,
         // eslint-disable-next-line no-mixed-operators
-        character.defense * (80 + character.health) / 100,
+        (character.defense * (80 + character.health)) / 100,
       );
       character.attack = attackAfter;
       character.defense = defenseAfter;
