@@ -29,9 +29,9 @@ export default class GameController {
   }
 
   onCellEnter(index) {
-    const character = this.gameState.board[index];
+    const character = this.gameState.positions[index];
 
-    if (character && character.player) {
+    if (character && character.character.player) {
       if (character !== this.selectedCharacter) {
         return;
       }
@@ -51,9 +51,9 @@ export default class GameController {
   }
 
   onCellLeave(index) {
-    const character = this.gameState.board[index];
+    const character = this.gameState.positions[index];
 
-    if (character && character.player) {
+    if (character && character.character.player) {
       if (character !== this.selectedCharacter) {
         return;
       }
@@ -72,12 +72,12 @@ export default class GameController {
   }
 
   onCellClick(index) {
-    const character = this.gameState.board[index];
+    const character = this.gameState.positions[index];
 
-    if (character && character.player && character !== this.selectedCharacter) {
+    if (character && character.character.player && character !== this.selectedCharacter) {
       if (this.selectedCharacter) {
-        const previousIndex = this.gameState.board.findIndex(
-          (cell) => cell === this.selectedCharacter,
+        const previousIndex = this.gameState.positions.findIndex(
+          (positionedCharacter) => positionedCharacter === this.selectedCharacter,
         );
         this.gamePlay.deselectCell(previousIndex);
       }
@@ -90,82 +90,167 @@ export default class GameController {
       const allowedMoves = this.getAllowedMoves(position);
 
       if (allowedMoves.includes(index)) {
-        const target = this.gameState.board[index];
-        this.attackSelectedCharacter(target);
+        this.moveSelectedCharacter(index);
       } else {
         this.gamePlay.showMessage('Invalid move!');
       }
     }
   }
 
-  async attackSelectedCharacter(target) {
-    const attacker = this.selectedCharacter;
-    const damage = Math.max(
-      attacker.attack - target.defence,
-      attacker.attack * 0.1,
-    );
+  createTooltipText(level, attack, defense, health) {
+    return `🎖${level} ⚔${attack} 🛡${defense} ❤${health}`;
+  }
 
-    // eslint-disable-next-line no-undef
-    await this.gamePlay.showDamage(index, damage);
-
-    // eslint-disable-next-line no-param-reassign
-    target.health -= damage;
-
-    if (target.health <= 0) {
-      // Remove the defeated character from the board
-      const targetIndex = this.gameState.board.findIndex(
-        (cell) => cell === target,
+  selectPlayerCharacter(character, index) {
+    if (this.selectedCharacter) {
+      const previousIndex = this.gameState.positions.findIndex(
+        (positionedCharacter) => positionedCharacter === this.selectedCharacter,
       );
-      this.gameState.board[targetIndex] = null;
-      this.gamePlay.redrawPositions(this.gameState.board);
-    } else {
-      this.gamePlay.redrawPositions(this.gameState.board);
+      this.gamePlay.deselectCell(previousIndex);
     }
 
-    this.switchTurn();
+    this.selectedCharacter = character;
+    this.gamePlay.selectCell(index);
+    this.gamePlay.setCursor('pointer');
+  }
+
+  getCharacterByIndex(index) {
+    return this.gameState.positions[index];
+  }
+
+  isPlayerCharacter(character) {
+    return (
+      character.character instanceof Bowman
+      || character.character instanceof Swordsman
+      || character.character instanceof Magician
+    );
+  }
+
+  showError(message) {
+    this.gamePlay.showMessage(message);
+  }
+
+  startNewGame() {
+    this.gameState.reset();
+    this.generateTeams();
+    this.gamePlay.redrawPositions(this.gameState.positions);
+
+    if (this.selectedCharacter) {
+      const previousIndex = this.gameState.positions.findIndex(
+        (positionedCharacter) => positionedCharacter === this.selectedCharacter,
+      );
+      this.gamePlay.deselectCell(previousIndex);
+      this.selectedCharacter = null;
+    }
+  }
+
+  generateTeams() {
+    const playerTypes = [Bowman, Swordsman, Magician];
+    const maxLevel = 3;
+    const playerCharacterCount = 3;
+    const enemyCharacterCount = 3;
+
+    this.playerTeam = this.generateTeam(
+      playerTypes,
+      maxLevel,
+      playerCharacterCount,
+      'player',
+    );
+    this.enemyTeam = this.generateTeam(
+      playerTypes,
+      maxLevel,
+      enemyCharacterCount,
+      'enemy',
+    );
+
+    this.gameState.positions = [
+      ...this.playerTeam.characters.map(
+        (character) => new PositionedCharacter(character, this.getRandomPosition('player')),
+      ),
+      ...this.enemyTeam.characters.map(
+        (character) => new PositionedCharacter(character, this.getRandomPosition('enemy')),
+      ),
+    ];
+  }
+
+  generateTeam(allowedTypes, maxLevel, characterCount, team) {
+    const teamCharacters = [];
+    const columnIndices = this.columnIndices[team];
+
+    // eslint-disable-next-line no-plusplus
+    for (let i = 0; i < characterCount; i++) {
+      const RandomType = allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
+      const randomLevel = Math.floor(Math.random() * maxLevel) + 1;
+      const character = new RandomType(randomLevel);
+      const position = this.getRandomPosition(columnIndices);
+      const positionedCharacter = new PositionedCharacter(character, position);
+      teamCharacters.push(positionedCharacter);
+    }
+
+    return new Team(teamCharacters);
+  }
+
+  getRandomPosition(columnIndices) {
+    const rowIndex = Math.floor(Math.random() * this.gamePlay.boardSize);
+    const columnIndex = columnIndices[Math.floor(Math.random() * columnIndices.length)];
+    return rowIndex * this.gamePlay.boardSize + columnIndex;
   }
 
   getAllowedMoves(position) {
-    const allowedMoves = [];
-    const { row, column } = position;
-
-    for (let i = 1; i <= this.selectedCharacter.moveRange; i += 1) {
-      const leftIndex = this.gamePlay.boardSize * row + column - i;
-      const rightIndex = this.gamePlay.boardSize * row + column + i;
-      const topIndex = this.gamePlay.boardSize * (row - i) + column;
-      const bottomIndex = this.gamePlay.boardSize * (row + i) + column;
-
-      if (leftIndex >= 0 && leftIndex % this.gamePlay.boardSize <= column - i) {
-        allowedMoves.push(leftIndex);
-      }
-
-      if (
-        rightIndex < this.gamePlay.boardSize ** 2
-        && rightIndex % this.gamePlay.boardSize >= column + i
-      ) {
-        allowedMoves.push(rightIndex);
-      }
-
-      if (
-        topIndex >= 0
-        && Math.floor(topIndex / this.gamePlay.boardSize) <= row - i
-      ) {
-        allowedMoves.push(topIndex);
-      }
-
-      if (
-        bottomIndex < this.gamePlay.boardSize ** 2
-        && Math.floor(bottomIndex / this.gamePlay.boardSize) >= row + i
-      ) {
-        allowedMoves.push(bottomIndex);
-      }
+    const character = this.getCharacterByPosition(position);
+    const { type } = character.character;
+    if (type === 'swordsman' || type === 'skeleton') {
+      return this.getMovesInRadius(position, 1);
+    } if (type === 'bowman' || type === 'vampire') {
+      return this.getMovesInRadius(position, 2);
+    } if (type === 'magician' || type === 'demon') {
+      return this.getMovesInRadius(position, 4);
     }
 
-    return allowedMoves;
+    return [];
   }
 
-  switchTurn() {
-    this.currentPlayerIndex = (this.currentPlayerIndex + 1) % 2;
+  toggleCurrentPlayer() {
+    this.currentPlayerIndex = this.currentPlayerIndex === 0 ? 1 : 0;
+  }
+
+  async moveSelectedCharacter(index) {
+    const { position } = this.selectedCharacter;
+    const character = this.getCharacterByIndex(index);
+
+    if (character && !this.isPlayerCharacter(character)) {
+      await this.attackEnemy(character);
+    } else {
+      this.selectedCharacter.position = index;
+      this.gamePlay.deselectCell(position);
+      this.gamePlay.redrawPositions(this.gameState.positions);
+      this.toggleCurrentPlayer();
+    }
+
+    this.selectedCharacter = null;
+    this.gamePlay.deselectCell(index);
+    this.gamePlay.setCursor('auto');
+  }
+
+  async attackEnemy(enemy) {
+    const { character } = this.selectedCharacter;
+
+    try {
+      await character.attack(enemy.character);
+
+      if (!enemy.character.isAlive()) {
+        const enemyIndex = this.gameState.positions.findIndex(
+          (positionedCharacter) => positionedCharacter === enemy,
+        );
+        this.gameState.positions.splice(enemyIndex, 1);
+        this.gamePlay.deselectCell(enemyIndex);
+      }
+
+      this.gamePlay.redrawPositions(this.gameState.positions);
+      this.toggleCurrentPlayer();
+    } catch (error) {
+      this.showError(error.message);
+    }
   }
 }
 
@@ -173,49 +258,18 @@ class GameState {
   constructor() {
     this.level = 1;
     this.theme = 'prairie';
-    this.board = [];
+    this.positions = [];
   }
 
   init() {
     this.level = 1;
     this.theme = 'prairie';
-    this.board = Array(64).fill(null);
-
-    const playerTeam = new Team();
-    playerTeam.add(
-      new PositionedCharacter(new Swordsman(), this.columnIndices.player[0]),
-    );
-    playerTeam.add(
-      new PositionedCharacter(new Bowman(), this.columnIndices.player[0]),
-    );
-    playerTeam.add(
-      new PositionedCharacter(new Magician(), this.columnIndices.player[0]),
-    );
-
-    const enemyTeam = new Team();
-    enemyTeam.add(
-      new PositionedCharacter(new Swordsman(), this.columnIndices.enemy[0]),
-    );
-    enemyTeam.add(
-      new PositionedCharacter(new Bowman(), this.columnIndices.enemy[0]),
-    );
-    enemyTeam.add(
-      new PositionedCharacter(new Magician(), this.columnIndices.enemy[0]),
-    );
-
-    this.board = [...playerTeam.characters, ...enemyTeam.characters].map(
-      (character, index) => {
-        const row = Math.floor(index / this.gamePlay.boardSize);
-        const column = index % this.gamePlay.boardSize;
-        const position = { row, column };
-        return new PositionedCharacter(character, position);
-      },
-    );
+    this.positions = [];
   }
 
   reset() {
     this.level = 1;
     this.theme = 'prairie';
-    this.board = Array(64).fill(null);
+    this.positions = [];
   }
 }
