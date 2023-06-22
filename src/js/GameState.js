@@ -1,4 +1,5 @@
-export default class GameState {
+/* eslint-disable no-console */
+class GameState {
   constructor() {
     this.level = 1;
     this.theme = 'prairie';
@@ -44,12 +45,10 @@ export default class GameState {
 
       const attackAfter = Math.max(
         character.attack,
-        // eslint-disable-next-line no-mixed-operators
         (character.attack * (80 + character.health)) / 100,
       );
       const defenseAfter = Math.max(
         character.defense,
-        // eslint-disable-next-line no-mixed-operators
         (character.defense * (80 + character.health)) / 100,
       );
       character.attack = attackAfter;
@@ -72,4 +71,41 @@ export default class GameState {
         this.theme = 'prairie';
     }
   }
+
+  save() {
+    try {
+      const gameStateJson = JSON.stringify(this);
+      localStorage.setItem('gameState', gameStateJson);
+      console.log('Game state saved successfully.');
+    } catch (error) {
+      console.log('Failed to save game state:', error);
+    }
+  }
+
+  load() {
+    try {
+      const gameStateJson = localStorage.getItem('gameState');
+      if (gameStateJson) {
+        const loadedGameState = JSON.parse(gameStateJson);
+        Object.assign(this, loadedGameState);
+        console.log('Game state loaded successfully.');
+      }
+    } catch (error) {
+      console.error('Failed to load game state:', error);
+    }
+  }
 }
+
+const gameState = new GameState();
+gameState.level = 3;
+gameState.theme = 'arctic';
+gameState.positions = [1];
+
+gameState.save();
+
+const loadedGameState = new GameState();
+loadedGameState.load();
+// eslint-disable-next-line no-console
+console.log(loadedGameState.level);
+console.log(loadedGameState.theme);
+console.log(loadedGameState.positions);

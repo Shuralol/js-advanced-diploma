@@ -1,4 +1,5 @@
 import { calcHealthLevel, calcTileType } from './utils';
+// eslint-disable-next-line no-unused-vars
 import cursors from './cursors';
 
 export default class GamePlay {
@@ -13,6 +14,8 @@ export default class GamePlay {
     this.newGameListeners = [];
     this.saveGameListeners = [];
     this.loadGameListeners = [];
+    this.gameOver = false;
+    this.maxScore = 0;
   }
 
   bindToDOM(container) {
@@ -22,11 +25,6 @@ export default class GamePlay {
     this.container = container;
   }
 
-  /**
-   * Draws boardEl with specific theme
-   *
-   * @param theme
-   */
   drawUi(theme) {
     this.checkBinding();
 
@@ -64,11 +62,6 @@ export default class GamePlay {
     this.cells = Array.from(this.boardEl.children);
   }
 
-  /**
-   * Draws positions (with chars) on boardEl
-   *
-   * @param positions array of PositionedCharacter objects
-   */
   redrawPositions(positions) {
     for (const cell of this.cells) {
       cell.innerHTML = '';
@@ -92,223 +85,94 @@ export default class GamePlay {
     }
   }
 
-  getMovesInRadius(position, radius) {
-    const allowedMoves = [];
-    const rowIndex = Math.floor(position / this.gamePlay.boardSize);
-    const columnIndex = position % this.gamePlay.boardSize;
-
-    // eslint-disable-next-line no-plusplus
-    for (let row = rowIndex - radius; row <= rowIndex + radius; row++) {
-      // eslint-disable-next-line no-plusplus
-      for (let col = columnIndex - radius; col <= columnIndex + radius; col++) {
-        if (this.isValidPosition(row, col) && !(row === rowIndex && col === columnIndex)) {
-          allowedMoves.push(row * this.gamePlay.boardSize + col);
-        }
-      }
-    }
-
-    return allowedMoves;
-  }
-
-  isValidPosition(row, col) {
-    return row >= 0 && row < this.gamePlay.boardSize && col >= 0 && col < this.gamePlay.boardSize;
-  }
-
-  getCharacterByPosition(position) {
-    return this.gameState.board[position];
-  }
-
-  /**
-   * Add listener to mouse enter for cell
-   *
-   * @param callback
-   */
   addCellEnterListener(callback) {
     this.cellEnterListeners.push(callback);
   }
 
-  /**
-   * Add listener to mouse leave for cell
-   *
-   * @param callback
-   */
   addCellLeaveListener(callback) {
     this.cellLeaveListeners.push(callback);
   }
 
-  /**
-   * Add listener to mouse click for cell
-   *
-   * @param callback
-   */
   addCellClickListener(callback) {
     this.cellClickListeners.push(callback);
   }
 
-  /**
-   * Add listener to "New Game" button click
-   *
-   * @param callback
-   */
   addNewGameListener(callback) {
     this.newGameListeners.push(callback);
   }
 
-  /**
-   * Add listener to "Save Game" button click
-   *
-   * @param callback
-   */
   addSaveGameListener(callback) {
     this.saveGameListeners.push(callback);
   }
 
-  /**
-   * Add listener to "Load Game" button click
-   *
-   * @param callback
-   */
   addLoadGameListener(callback) {
     this.loadGameListeners.push(callback);
   }
 
-  onCellEnter(index) {
-    const character = this.gameState.board[index];
-
-    if (character && character.player) {
-      if (character !== this.selectedCharacter) {
-        return;
-      }
-
-      this.gamePlay.setCursor('pointer');
-    } else if (this.selectedCharacter) {
-      const { position } = this.selectedCharacter;
-      const allowedMoves = this.getAllowedMoves(position);
-
-      if (allowedMoves.includes(index)) {
-        this.gamePlay.selectCell(index, 'green');
-        this.gamePlay.setCursor('pointer');
-      } else {
-        this.gamePlay.setCursor('notallowed');
+  onCellEnter(event) {
+    if (!this.gameOver) {
+      const cellIndex = Array.from(this.boardEl.children).indexOf(event.currentTarget);
+      for (const listener of this.cellEnterListeners) {
+        listener(cellIndex);
       }
     }
   }
 
-  onCellLeave(index) {
-    const character = this.gameState.board[index];
-
-    if (character && character.player) {
-      if (character !== this.selectedCharacter) {
-        return;
+  onCellLeave(event) {
+    if (!this.gameOver) {
+      const cellIndex = Array.from(this.boardEl.children).indexOf(event.currentTarget);
+      for (const listener of this.cellLeaveListeners) {
+        listener(cellIndex);
       }
-
-      this.gamePlay.setCursor('pointer');
-    } else if (this.selectedCharacter) {
-      const { position } = this.selectedCharacter;
-      const allowedMoves = this.getAllowedMoves(position);
-
-      if (allowedMoves.includes(index)) {
-        this.gamePlay.deselectCell(index);
-      }
-
-      this.gamePlay.setCursor('auto');
     }
   }
 
-  onCellClick(index) {
-    const character = this.gameState.board[index];
-
-    if (character && character.player && character !== this.selectedCharacter) {
-      if (this.selectedCharacter) {
-        const previousIndex = this.gameState.board.findIndex(
-          (cell) => cell === this.selectedCharacter,
-        );
-        this.gamePlay.deselectCell(previousIndex);
-      }
-
-      this.selectedCharacter = character;
-      this.gamePlay.selectCell(index);
-      this.gamePlay.setCursor('pointer');
-    } else if (this.selectedCharacter) {
-      const { position } = this.selectedCharacter;
-      const allowedMoves = this.getAllowedMoves(position);
-
-      if (allowedMoves.includes(index)) {
-        this.moveSelectedCharacter(index);
-      } else {
-        this.gamePlay.showMessage('Invalid move!');
+  onCellClick(event) {
+    if (!this.gameOver) {
+      const cellIndex = Array.from(this.boardEl.children).indexOf(event.currentTarget);
+      for (const listener of this.cellClickListeners) {
+        listener(cellIndex);
       }
     }
   }
 
   onNewGameClick(event) {
     event.preventDefault();
-    this.newGameListeners.forEach((o) => o.call(null));
+    if (this.gameOver) {
+      for (const listener of this.newGameListeners) {
+        listener();
+      }
+    }
   }
 
   onSaveGameClick(event) {
     event.preventDefault();
-    this.saveGameListeners.forEach((o) => o.call(null));
+    for (const listener of this.saveGameListeners) {
+      listener();
+    }
   }
 
   onLoadGameClick(event) {
     event.preventDefault();
-    this.loadGameListeners.forEach((o) => o.call(null));
-  }
-
-  static showError(message) {
-    // eslint-disable-next-line no-alert
-    alert(message);
-  }
-
-  static showMessage(message) {
-    // eslint-disable-next-line no-alert
-    alert(message);
-  }
-
-  selectCell(index, color = 'yellow') {
-    this.deselectCell(index);
-    this.cells[index].classList.add('selected', `selected-${color}`);
-  }
-
-  deselectCell(index) {
-    const cell = this.cells[index];
-    cell.classList.remove(...Array.from(cell.classList)
-      .filter((o) => o.startsWith('selected')));
-  }
-
-  showCellTooltip(message, index) {
-    this.cells[index].title = message;
-  }
-
-  hideCellTooltip(index) {
-    this.cells[index].title = '';
-  }
-
-  showDamage(index, damage) {
-    return new Promise((resolve) => {
-      const cell = this.cells[index];
-      const damageEl = document.createElement('span');
-      damageEl.textContent = damage;
-      damageEl.classList.add('damage');
-      cell.appendChild(damageEl);
-
-      damageEl.addEventListener('animationend', () => {
-        cell.removeChild(damageEl);
-        resolve();
-      });
-    });
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  setCursor(cursorType) {
-    const body = document.querySelector('body');
-    body.style.cursor = cursors[cursorType];
+    for (const listener of this.loadGameListeners) {
+      listener();
+    }
   }
 
   checkBinding() {
-    if (this.container === null) {
+    if (!this.container) {
       throw new Error('GamePlay not bind to DOM');
+    }
+  }
+
+  saveMaxScore() {
+    localStorage.setItem('maxScore', this.maxScore.toString());
+  }
+
+  loadMaxScore() {
+    const maxScoreStr = localStorage.getItem('maxScore');
+    if (maxScoreStr !== null) {
+      this.maxScore = parseInt(maxScoreStr, 10);
     }
   }
 }
