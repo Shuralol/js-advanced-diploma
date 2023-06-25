@@ -2,15 +2,15 @@
   "name": "js-advanced-diploma",
   "version": "1.0.0",
   "scripts": {
-    "build": "npm run lint && npm test",
+    "build": "webpack --mode production",
     "test": "jest --coverage",
     "lint": "eslint ."
   },
   "devDependencies": {
-    "@babel/core": "^7.21.8",
-    "@babel/preset-env": "^7.21.5",
+    "@babel/core": "^7.22.5",
+    "@babel/preset-env": "^7.22.5",
     "babel-loader": "^9.1.2",
-    "css-loader": "^6.7.4",
+    "css-loader": "^6.8.1",
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-loader": "^4.0.2",
