@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "build": "webpack --mode production",
+    "start": "webpack serve --mode development",
     "test": "jest --coverage",
     "lint": "eslint ."
   },
@@ -19,6 +20,7 @@
     "jest": "^27.5.1",
     "style-loader": "^3.3.3",
     "webpack": "^5.83.1",
-    "webpack-cli": "^5.1.1"
+    "webpack-cli": "^5.1.1",
+    "webpack-dev-server": "^4.6.0"
   }
 }
