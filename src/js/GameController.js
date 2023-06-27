@@ -3,8 +3,9 @@
 // eslint-disable-next-line max-classes-per-file
 import Team from './Team';
 import PositionedCharacter from './PositionedCharacter';
-// eslint-disable-next-line import/no-unresolved
-import { Swordsman, Bowman, Magician } from './Characters';
+import Swordsman from './characters/Swordsman';
+import Bowman from './characters/Bowman';
+import Magician from './characters/Magician';
 
 export default class GameController {
   constructor(gamePlay, stateService) {

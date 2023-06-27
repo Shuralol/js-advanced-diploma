@@ -1,4 +1,4 @@
-import Character from '../js/Character';
+import Character from '../Character';
 
 export default class Bowman extends Character {
   constructor(level) {
