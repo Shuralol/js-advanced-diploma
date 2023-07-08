@@ -9,23 +9,14 @@ module.exports = {
   output: {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist'),
+    assetModuleFilename: 'images/[name][ext]',
   },
   module: {
     rules: [
-
       {
-        test: /\.(png|jpg|gif)$/,
-        use: [
-          {
-            loader: 'file-loader',
-            options: {
-              name: '[name].[ext]',
-              outputPath: 'images',
-            },
-          },
-        ],
+        test: /\.(png|jpe?g|gif|svg)$/i,
+        type: 'asset/resource',
       },
-
       {
         test: /\.css$/,
         use: [MiniCssExtractPlugin.loader, 'css-loader'],
@@ -42,8 +33,6 @@ module.exports = {
     }),
   ],
   devServer: {
-    /*  contentBase: path.resolve(__dirname, 'dist'),
-    hot: true, */
     port: 8080,
   },
 };
